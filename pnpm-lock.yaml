@@ -136,7 +136,7 @@ importers:
         version: link:../packages/carta-md
       clsx:
         specifier: ^2.0.0
-        version: 2.0.0
+        version: 2.1.1
       cmdk-sv:
         specifier: ^0.0.18
         version: 0.0.18(svelte@5.20.1)
@@ -221,7 +221,7 @@ importers:
         version: 5.2.0
       esm-env:
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.2.2
       rehype-stringify:
         specifier: ^10.0.0
         version: 10.0.0
@@ -240,6 +240,9 @@ importers:
       unified:
         specifier: ^11.0.5
         version: 11.0.5
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: 'catalog:'
@@ -365,7 +368,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^18.16.3
-        version: 18.16.3
+        version: 18.19.76
       carta-md:
         specifier: workspace:*
         version: link:../carta-md
@@ -380,7 +383,7 @@ importers:
     dependencies:
       esm-env:
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.2.2
       rehype-parse:
         specifier: ^9.0.0
         version: 9.0.0
@@ -438,7 +441,7 @@ importers:
         version: 2.1.0
       node-emoji:
         specifier: ^2.1.3
-        version: 2.1.3
+        version: 2.2.0
       remark-emoji:
         specifier: ^5.0.0
         version: 5.0.0
@@ -607,7 +610,7 @@ importers:
         version: link:../carta-md
       esm-env:
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.2.2
       typescript:
         specifier: 'catalog:'
         version: 5.7.3
@@ -1405,9 +1408,6 @@ packages:
   '@types/node-emoji@1.8.2':
     resolution: {integrity: sha512-PfF1qL/9veo8BSHLV84C9ORNr3lHSlnWJ6yU8OdNufoftajeWHTLVbGHvp2B7e7DPDS9gMs6cfeSsqo5rqSitg==}
 
-  '@types/node@18.16.3':
-    resolution: {integrity: sha512-OPs5WnnT1xkCBiuQrZA4+YAV4HEJejmHneyraIaxsbev5yCEr6KMwINNFP9wQeFIw8FWcoTqF3vQsa5CDaI+8Q==}
-
   '@types/node@18.19.76':
     resolution: {integrity: sha512-yvR7Q9LdPz2vGpmpJX5LolrgRdWvB67MJKDPSgIIzpFbaf9a1j/f5DnLp5VDyHGMR0QZHlTr1afsD87QCXFHKw==}
 
@@ -1902,10 +1902,6 @@ packages:
     resolution: {integrity: sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==}
     engines: {node: '>=0.8'}
 
-  clsx@2.0.0:
-    resolution: {integrity: sha512-rQ1+kcj+ttHG0MKVGBUXwayCCF1oh39BF5COIpRzuCEv8Mwjv0XucrI2ExNTOn9IlLifGClWQcU9BrZORvtw6Q==}
-    engines: {node: '>=6'}
-
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
@@ -2379,9 +2375,6 @@ packages:
     peerDependenciesMeta:
       jiti:
         optional: true
-
-  esm-env@1.0.0:
-    resolution: {integrity: sha512-Cf6VksWPsTuW01vU9Mk/3vRue91Zevka5SjyNf3nEpokFRuqt/KjUQoGAwq9qMmhpLTHmXzSIrFRw8zxWzmFBA==}
 
   esm-env@1.2.2:
     resolution: {integrity: sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==}
@@ -3756,10 +3749,6 @@ packages:
 
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
-
-  node-emoji@2.1.3:
-    resolution: {integrity: sha512-E2WEOVsgs7O16zsURJ/eH8BqhF029wGpEOnv7Urwdo2wmQanOACwJQh0devF9D9RhoZru0+9JXIS0dBXIAz+lA==}
-    engines: {node: '>=18'}
 
   node-emoji@2.2.0:
     resolution: {integrity: sha512-Z3lTE9pLaJF47NyMhd4ww1yFTAP8YhYI8SleJiHzM46Fgpm5cnNzSl9XfzFNqbaz+VlJrIj3fXQ4DeN1Rjm6cw==}
@@ -6208,8 +6197,6 @@ snapshots:
 
   '@types/node-emoji@1.8.2': {}
 
-  '@types/node@18.16.3': {}
-
   '@types/node@18.19.76':
     dependencies:
       undici-types: 5.26.5
@@ -6789,8 +6776,6 @@ snapshots:
 
   clone@1.0.4: {}
 
-  clsx@2.0.0: {}
-
   clsx@2.1.1: {}
 
   cmdk-sv@0.0.18(svelte@5.20.1):
@@ -7301,8 +7286,6 @@ snapshots:
       jiti: 2.4.2
     transitivePeerDependencies:
       - supports-color
-
-  esm-env@1.0.0: {}
 
   esm-env@1.2.2: {}
 
@@ -9034,13 +9017,6 @@ snapshots:
       lower-case: 2.0.2
       tslib: 2.8.1
 
-  node-emoji@2.1.3:
-    dependencies:
-      '@sindresorhus/is': 4.6.0
-      char-regex: 1.0.2
-      emojilib: 2.4.0
-      skin-tone: 2.0.0
-
   node-emoji@2.2.0:
     dependencies:
       '@sindresorhus/is': 4.6.0
@@ -9596,7 +9572,7 @@ snapshots:
       '@types/mdast': 4.0.4
       emoticon: 4.0.1
       mdast-util-find-and-replace: 3.0.1
-      node-emoji: 2.1.3
+      node-emoji: 2.2.0
       unified: 11.0.5
 
   remark-gfm@4.0.0:

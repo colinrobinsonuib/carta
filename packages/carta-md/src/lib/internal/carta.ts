@@ -111,7 +111,7 @@ export interface Options {
 	/**
 	 * HTML sanitizer.
 	 */
-	sanitizer: ((html: string) => string) | false;
+	sanitizer?: ((html: string) => string) | false;
 	/**
 	 * Highlighter options.
 	 */

@@ -11,6 +11,11 @@ produce a line break.
 Text attributes _italic_,
 **bold**, `monospace`. Some `console.log(lst.filter(e => e == true))` implementations may use _single-asterisks_ for italic text.
 
+![eiffel](eiffel.jpg)
+![eiffel](eiffel.jpg)
+![eiffel](eiffel.jpg)
+
+
 Horizontal rule:
 
 ---
@@ -66,8 +71,6 @@ Numbered list:
 3. repeat
 
 An [example](http://example.com).
-
-![pic](pic.jpg)
 
 > Markdown uses email-style
 > characters for blockquoting.

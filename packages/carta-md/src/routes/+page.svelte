@@ -1,11 +1,43 @@
 <script lang="ts">
 	import { MarkdownEditor } from '$lib';
-	import { Carta } from '$lib/internal/carta';
+	import { Carta, type Plugin } from '$lib/internal/carta';
+	import type { Root, Element } from 'hast';
+	import { visit } from 'unist-util-visit';
 	import ToggleTheme from './ToggleTheme.svelte';
 	import sampleText from './sample.md?raw';
 	import '$lib/default.css';
 
-	const carta = new Carta();
+	export const betterscroll = (): Plugin => {
+		return {
+			transformers: [
+				{
+					execution: 'sync',
+					type: 'rehype',
+					transform: ({ processor }) => {
+						processor.use(rehypeLineNumbers);
+					},
+				},
+			],
+		};
+	};
+
+	function rehypeLineNumbers() {
+		return (tree: Root) => {
+			visit(tree, 'element', (node: Element, index, parent) => {
+				// Only apply to elements that are direct children of the root
+				if (parent === tree && node.position?.start?.line) {
+					if (!node.properties) {
+						node.properties = {};
+					}
+					node.properties['data-line'] = node.position.start.line;
+				}
+			});
+		};
+	}
+
+	const carta = new Carta({
+		extensions: [betterscroll()],
+	});
 </script>
 
 <svelte:head>
@@ -24,7 +56,7 @@
 
 <main>
 	<ToggleTheme class="toggle-theme" />
-	<MarkdownEditor value={sampleText} placeholder="Some text..." mode="split" {carta} />
+	<MarkdownEditor scroll="click" value={sampleText} placeholder="Some text..." mode="split" {carta} />
 </main>
 
 <style>

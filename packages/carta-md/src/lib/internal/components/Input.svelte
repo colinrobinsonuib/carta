@@ -43,6 +43,7 @@
 		 */
 		highlightDelay: number;
 		onscroll: UIEventHandler<HTMLDivElement>;
+		clickscroll: () => void;
 		children: Snippet;
 	}
 
@@ -54,6 +55,7 @@
 		props: textareaProps = {},
 		hidden = false,
 		onscroll,
+		clickscroll,
 		children,
 		highlightDelay
 	}: Props = $props();
@@ -101,6 +103,11 @@
 		if (selectedText) return;
 
 		textarea?.focus();
+	};
+
+	const onclick = () => {
+		focus();
+		clickscroll();
 	};
 
 	/**
@@ -228,7 +235,7 @@
 	tabindex="-1"
 	class="carta-input"
 	style="display: {hidden ? 'none' : 'unset'};"
-	onclick={focus}
+	{onclick}
 	onkeydown={focus}
 	{onscroll}
 	bind:this={elem}

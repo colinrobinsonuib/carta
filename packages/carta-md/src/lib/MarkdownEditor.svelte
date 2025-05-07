@@ -40,7 +40,7 @@
 		 * - 'sync': The scroll is synchronized between the input and renderer.
 		 * - 'async': The scroll is not synchronized between the input and renderer.
 		 */
-		scroll?: 'sync' | 'async';
+		scroll?: 'sync' | 'async' | 'click';
 		/**
 		 * Whether to disable the toolbar.
 		 */
@@ -178,6 +178,29 @@
 		elem.scroll({ top: avbSpace * currentScrollPercentage, behavior: 'instant' });
 	}
 
+	function handleClickScroll() {
+		if (scroll != 'click') return;
+		if (windowMode != 'split') return;
+		if (!carta.input) return;
+		if(!rendererElem) return;
+
+		const line = carta.input.textarea.value
+				.slice(0, carta.input.textarea.selectionStart)
+				.split('\n').length;
+		console.log(line);
+
+
+		const targetElement = Array.from(rendererElem.querySelectorAll('[data-line]'))
+				.map((el) => ({ el, line: parseInt(el.getAttribute('data-line') || '0', 10) }))
+				.reduce((closest, current) => {
+					return Math.abs(current.line - line) < Math.abs(closest.line - line) ? current : closest;
+				}, { el: null, line: Infinity }).el;
+		console.log(targetElement);
+		if (targetElement) {
+			rendererElem.scrollTo({ top: targetElement.offsetTop, behavior: 'smooth' });
+		}
+	}
+
 	onMount(() => carta.$setElement(editorElem));
 	onMount(() => (mounted = true));
 </script>
@@ -199,6 +222,7 @@
 				bind:this={input}
 				bind:elem={inputElem}
 				onscroll={handleScroll}
+				clickscroll={handleClickScroll}
 			>
 				<!-- Input extensions components -->
 				{#if mounted}
