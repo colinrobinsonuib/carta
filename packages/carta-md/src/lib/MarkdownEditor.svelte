@@ -40,7 +40,7 @@
 		 * - 'sync': The scroll is synchronized between the input and renderer.
 		 * - 'async': The scroll is not synchronized between the input and renderer.
 		 */
-		scroll?: 'sync' | 'async' | 'click';
+		scroll?: 'sync' | 'async' | 'cursor';
 		/**
 		 * Whether to disable the toolbar.
 		 */
@@ -178,26 +178,41 @@
 		elem.scroll({ top: avbSpace * currentScrollPercentage, behavior: 'instant' });
 	}
 
-	function handleClickScroll() {
-		if (scroll != 'click') return;
-		if (windowMode != 'split') return;
+	function handleSelectionScroll() {
+		if (scroll !== 'cursor') return;
+		if (windowMode !== 'split') return;
 		if (!carta.input) return;
 		if(!rendererElem) return;
 
-		const line = carta.input.textarea.value
-				.slice(0, carta.input.textarea.selectionStart)
-				.split('\n').length;
-		console.log(line);
+		// Count new lines in the textarea to find the line number
+		const line = carta.input.textarea.value.slice(0, carta.input.textarea.selectionStart).split('\n').length;
 
-
-		const targetElement = Array.from(rendererElem.querySelectorAll('[data-line]'))
-				.map((el) => ({ el, line: parseInt(el.getAttribute('data-line') || '0', 10) }))
+		// Loop through all elements with data-line attribute and find the closest one
+		const initialAccumulator: { el: HTMLElement | null; line: number } = { el: null, line: Infinity };
+		const targetElement: HTMLElement | null = Array.from(rendererElem.querySelectorAll<HTMLElement>('[data-line]'))
+				.map((el_dom_node): { el: HTMLElement; line: number } => ({
+					el: el_dom_node,
+					line: parseInt(el_dom_node.getAttribute('data-line') || '0', 10)
+				}))
 				.reduce((closest, current) => {
-					return Math.abs(current.line - line) < Math.abs(closest.line - line) ? current : closest;
-				}, { el: null, line: Infinity }).el;
-		console.log(targetElement);
+					if (closest.el === null || Math.abs(current.line - line) < Math.abs(closest.line - line)) {
+						return current;
+					} else {
+						return closest;
+					}
+				}, initialAccumulator).el;
+
 		if (targetElement) {
-			rendererElem.scrollTo({ top: targetElement.offsetTop, behavior: 'smooth' });
+			const rendererVisibleHeight = rendererElem.clientHeight;
+			const targetOffsetTop = targetElement.offsetTop;
+			const targetHeight = targetElement.offsetHeight;
+
+			const scrollToY = targetOffsetTop + (targetHeight / 2) - (rendererVisibleHeight / 2);
+
+			rendererElem.scrollTo({
+				top: scrollToY,
+				behavior: 'smooth'
+			});
 		}
 	}
 
@@ -222,7 +237,7 @@
 				bind:this={input}
 				bind:elem={inputElem}
 				onscroll={handleScroll}
-				clickscroll={handleClickScroll}
+				onselectionchange={handleSelectionScroll}
 			>
 				<!-- Input extensions components -->
 				{#if mounted}

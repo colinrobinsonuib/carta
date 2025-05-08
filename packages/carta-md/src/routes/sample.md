@@ -12,7 +12,9 @@ Text attributes _italic_,
 **bold**, `monospace`. Some `console.log(lst.filter(e => e == true))` implementations may use _single-asterisks_ for italic text.
 
 ![eiffel](eiffel.jpg)
+
 ![eiffel](eiffel.jpg)
+
 ![eiffel](eiffel.jpg)
 
 

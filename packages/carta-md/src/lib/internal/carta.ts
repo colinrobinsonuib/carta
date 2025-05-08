@@ -4,6 +4,7 @@ import remarkParse from 'remark-parse';
 import remarkGfm, { type Options as GfmOptions } from 'remark-gfm';
 import remarkRehype, { type Options as RehypeOptions } from 'remark-rehype';
 import rehypeStringify from 'rehype-stringify';
+import rehypeLineNumbers from 'rehype-line-numbers';
 import type { TextAreaHistoryOptions } from './history';
 import { InputEnhancer } from './input';
 import {
@@ -389,6 +390,7 @@ export class Carta {
 			plugin.transform({ processor: syncProcessor, carta: this });
 		}
 
+		syncProcessor.use(rehypeLineNumbers);
 		syncProcessor.use(rehypeStringify);
 
 		return syncProcessor;
@@ -423,6 +425,7 @@ export class Carta {
 			await plugin.transform({ processor: asyncProcessor, carta: this });
 		}
 
+		asyncProcessor.use(rehypeLineNumbers);
 		asyncProcessor.use(rehypeStringify);
 
 		return asyncProcessor;

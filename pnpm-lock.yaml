@@ -9,9 +9,6 @@ catalogs:
     '@sveltejs/adapter-auto':
       specifier: ^4.0.0
       version: 4.0.0
-    '@sveltejs/adapter-static':
-      specifier: ^3.0.8
-      version: 3.0.8
     '@sveltejs/kit':
       specifier: ^2.17.1
       version: 2.17.2
@@ -21,12 +18,6 @@ catalogs:
     '@sveltejs/vite-plugin-svelte':
       specifier: 5.0.3
       version: 5.0.3
-    '@types/node-emoji':
-      specifier: ^1.8.2
-      version: 1.8.2
-    publint:
-      specifier: ^0.3.6
-      version: 0.3.6
     svelte:
       specifier: ^5.19.7
       version: 5.20.1
@@ -259,6 +250,9 @@ importers:
       '@types/diff':
         specifier: ^5.2.1
         version: 5.2.1
+      rehype-line-numbers:
+        specifier: ^0.1.1
+        version: 0.1.1
       svelte:
         specifier: 'catalog:'
         version: 5.20.1
@@ -4388,6 +4382,9 @@ packages:
   rehype-katex@7.0.0:
     resolution: {integrity: sha512-h8FPkGE00r2XKU+/acgqwWUlyzve1IiOKwsEkg4pDL3k48PiE0Pt+/uLtVHDVkN1yA4iurZN6UES8ivHVEQV6Q==}
 
+  rehype-line-numbers@0.1.1:
+    resolution: {integrity: sha512-LKOASNgGeztQfZuTYOOSBWhbEm+4L3JUYlFFkNf/IzaZOQWnwytf43+RcMndxkBRS5W/8D71S8CgH8OcPm6c3A==}
+
   rehype-parse@9.0.0:
     resolution: {integrity: sha512-WG7nfvmWWkCR++KEkZevZb/uw41E8TsH4DsY9UxsTbIXCVGbAs4S+r8FrQ+OtH5EEQAs+5UxKC42VinkmpA1Yw==}
 
@@ -4653,10 +4650,6 @@ packages:
     engines: {node: '>=10.0'}
     peerDependencies:
       tslib: '2'
-
-  source-map-js@1.1.0:
-    resolution: {integrity: sha512-9vC2SfsJzlej6MAaMPLu8HiBSHGdRAJ9hVFYN1ibZoNkeanmDmLUcIrj6G9DGL7XMJ54AKg/G75akXl1/izTOw==}
-    engines: {node: '>=0.10.0'}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -9547,6 +9540,8 @@ snapshots:
       unist-util-visit-parents: 6.0.1
       vfile: 6.0.1
 
+  rehype-line-numbers@0.1.1: {}
+
   rehype-parse@9.0.0:
     dependencies:
       '@types/hast': 3.0.4
@@ -9744,7 +9739,7 @@ snapshots:
     dependencies:
       chokidar: 3.6.0
       immutable: 4.3.0
-      source-map-js: 1.1.0
+      source-map-js: 1.2.1
 
   saxes@6.0.0:
     dependencies:
@@ -9906,8 +9901,6 @@ snapshots:
     dependencies:
       tree-dump: 1.0.1(tslib@2.8.1)
       tslib: 2.8.1
-
-  source-map-js@1.1.0: {}
 
   source-map-js@1.2.1: {}
 
