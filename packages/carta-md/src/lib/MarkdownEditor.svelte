@@ -152,17 +152,78 @@
 	 * @param scrolled The element that is scrolled.
 	 * @param target The target element to scroll.
 	 */
+	let debugBoxDrawn = false;
 	function synchronizeScroll(scrolled: HTMLDivElement, target: HTMLDivElement) {
-		const percentage = calculateScrollPercentage(scrolled);
-		currentScrollPercentage = percentage;
-		// Return if the scrolled is caused by a previous scrollTo
-		if (currentlyScrolling && currentlyScrolling != scrolled) return;
 
-		currentlyScrolling = scrolled;
-		const targetAvbSpace = target.scrollHeight - target.clientHeight;
+		if(!carta.input) return;
+		if(!rendererElem) return;
+		if(target !== rendererElem) return;
 
-		target.scrollTo({ top: percentage * targetAvbSpace, behavior: 'auto' });
-		clearCurrentlyScrolling();
+		const rect = scrolled.getBoundingClientRect();
+
+		if (!debugBoxDrawn) {
+			const box = document.createElement('div');
+			Object.assign(box.style, {
+				position: 'fixed',        // fixed to viewport
+				left:       `${rect.left + 7.5}px`,
+				top:        `${rect.top  + 7.5}px`,
+				width:      `${5}px`,
+				height:     `${5}px`,
+				background: 'red',
+				pointerEvents: 'none',    // so it doesn’t block clicks
+				zIndex:     '9999'
+			});
+			document.body.appendChild(box);
+			debugBoxDrawn = true;
+		}
+
+		// Get elements at the top left of the input element
+		const elements = document.elementsFromPoint(rect.left + 10, rect.top  + 10);
+
+		// find the first <span class="line"> in that list
+		const spanLine = elements.find(el => el.matches('span.line'));
+		if(!spanLine) return;
+
+		const codeEl = spanLine.closest('code');
+		const childElems = Array.from(codeEl.children);
+		const spanLineNumber = childElems.indexOf(spanLine) + 1;
+
+		console.log('span.line is child #', spanLineNumber, 'of its <code>');
+
+		// Loop through all elements with data-line attribute and find the closest one
+		const initialAccumulator: { el: HTMLElement | null; line: number } = { el: null, line: Infinity };
+		const targetElement: HTMLElement | null = Array.from(rendererElem.querySelectorAll<HTMLElement>('[data-line]'))
+				.map((el_dom_node): { el: HTMLElement; line: number } => ({
+					el: el_dom_node,
+					line: parseInt(el_dom_node.getAttribute('data-line') || '0', 10)
+				}))
+				.reduce((closest, current) => {
+					if (closest.el === null) {
+						// First element is always the "closest" so far
+						return current;
+					}
+
+					const distCurrent = Math.abs(current.line - spanLineNumber);
+					const distClosest = Math.abs(closest.line - spanLineNumber);
+
+					if (distCurrent < distClosest) {
+						// Current is strictly closer
+						return current;
+					} else if (distCurrent === distClosest) {
+						// Equally close, prefer the one with the smaller line number
+						return (current.line < closest.line) ? current : closest;
+					} else {
+						// Closest is still closer (or equally close but has a smaller or equal line number from previous tie-break)
+						return closest;
+					}
+				}, initialAccumulator).el;
+
+		if (targetElement) {
+			target.scrollTo({
+				top: targetElement.offsetTop,
+				behavior: 'smooth'
+			});
+		}
 	}
 
 	/**
@@ -253,7 +314,7 @@
 				{value}
 				hidden={!(windowMode == 'split' || selectedTab == 'preview')}
 				bind:elem={rendererElem}
-				onscroll={handleScroll}
+				onscroll={()=>{}}
 				onrender={() => {
 					if (windowMode != 'split') return;
 					if (scroll != 'sync') return;

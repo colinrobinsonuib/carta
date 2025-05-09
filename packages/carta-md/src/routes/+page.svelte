@@ -24,7 +24,7 @@
 
 <main>
 	<ToggleTheme class="toggle-theme" />
-	<MarkdownEditor scroll="cursor" value={sampleText} placeholder="Some text..." mode="split" {carta} />
+	<MarkdownEditor scroll="sync" value={sampleText} placeholder="Some text..." mode="split" {carta} />
 </main>
 
 <style>
