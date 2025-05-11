@@ -24,14 +24,13 @@
 
 <main>
 	<ToggleTheme class="toggle-theme" />
-	<MarkdownEditor scroll="sync" value={sampleText} placeholder="Some text..." mode="split" {carta} />
+	<MarkdownEditor scroll="sync" value={sampleText} placeholder="Some text..." mode="auto" {carta} />
 </main>
 
 <style>
 	:global(body) {
 		margin: 0;
 		font-family: 'Inter var', sans-serif;
-		min-height: 100vh;
 	}
 
 	:global(.carta-font-code) {
@@ -46,9 +45,8 @@
 
 	main {
 		position: relative;
-
-		max-width: 1536px;
-		margin: 2rem auto 2rem auto;
+		max-width: 1500px;
+		margin: 2rem auto;
 	}
 
 	:global(img) {

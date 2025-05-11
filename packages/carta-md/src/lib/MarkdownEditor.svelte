@@ -9,7 +9,6 @@
 	import type { Carta } from './internal/carta';
 	import type { TextAreaProps } from './internal/textarea-props';
 	import { onMount } from 'svelte';
-	import { debounce } from './internal/utils';
 	import { defaultLabels, type Labels } from './internal/labels';
 	import Renderer from './internal/components/Renderer.svelte';
 	import Input from './internal/components/Input.svelte';
@@ -93,8 +92,6 @@
 	let editorElem: HTMLDivElement;
 	let inputElem: HTMLDivElement | undefined = $state();
 	let rendererElem: HTMLDivElement | undefined = $state();
-	let currentlyScrolling: HTMLDivElement | null;
-	let currentScrollPercentage = 0;
 	let input: Input | undefined = $state();
 
 	// Change the window mode based on the width
@@ -110,175 +107,285 @@
 	$effect(() => {
 		inputElem;
 		rendererElem;
-		loadScrollPosition(selectedTab);
+		if (windowMode === 'tabs') setScrollPosition();
 	});
 
+	let currentScrollLine = 0;
+	let isSyncingMarkdown = false;
+	let isSyncingHtml = false;
+
+	const SMOOTH_SCROLL_DURATION = 500;
+	const SYNC_DELAY = 150;
+
+	// Store ongoing animation frame IDs to make smooth scroll interruptible
+	const animationFrameIds = new Map();
+
 	/**
-	 * Calculate the scroll percentage of an element.
-	 * @param elem The element to calculate the scroll percentage.
+	 * Custom smooth scroll function.
+	 * @param {HTMLDivElement} element The scrollable element.
+	 * @param {number} to The target scrollTop value.
+	 * @param {number} duration The duration of the scroll in milliseconds.
+	 * @param {function} onComplete Callback when scroll is complete.
 	 */
-	function calculateScrollPercentage(elem: HTMLDivElement) {
-		const scrolledAvbSpace = elem.scrollHeight - elem.clientHeight;
-		const scrolledAmount = elem.scrollTop * (1 + elem.clientHeight / scrolledAvbSpace);
-		return scrolledAmount / elem.scrollHeight;
+	function customSmoothScroll(element:HTMLDivElement, to:number, duration:number, onComplete:() => void) {
+
+		// If there's an existing animation for this element, cancel it
+		if (animationFrameIds.has(element)) {
+			cancelAnimationFrame(animationFrameIds.get(element));
+			animationFrameIds.delete(element);
+		}
+
+		const start = element.scrollTop;
+		const change = to - start;
+		const startTime = performance.now();
+
+		// Easing function: easeInOutQuad
+		// t: current time, b: beginning value, c: change in value, d: duration
+		const easeInOutQuad = (t:number, b:number, c:number, d:number) => {
+			t /= d / 2;
+			if (t < 1) return c / 2 * t * t + b;
+			t--;
+			return -c / 2 * (t * (t - 2) - 1) + b;
+		};
+
+		function animateScroll() {
+			const currentTime = performance.now();
+			const elapsed = currentTime - startTime;
+
+			element.scrollTop = easeInOutQuad(elapsed, start, change, duration);
+
+			if (elapsed < duration) {
+				const frameId = requestAnimationFrame(animateScroll);
+				animationFrameIds.set(element, frameId);
+			} else {
+				// Ensure final position is exact
+				element.scrollTop = to;
+				animationFrameIds.delete(element);
+				if (onComplete) {
+					onComplete();
+				}
+			}
+		}
+
+		animateScroll();
 	}
 
 	/**
-	 * Start a debounce to clear the currently scrolling element, so that it executed
-	 * only once after the last scroll event.
+	 * Finds the HTML element with a matching data-line attribute, or the first element before it.
+	 * @param targetLineNumber
 	 */
-	const clearCurrentlyScrolling = debounce(() => {
-		currentlyScrolling = null;
-	}, 1000);
+	function findElementByLineOrBefore(targetLineNumber: number): HTMLElement | null {
+		if(!rendererElem) return null;
 
-	/**
-	 * Handle the scroll event to synchronize the scroll between the input and renderer.
-	 * @param e The scroll event.
-	 */
-	function handleScroll(e: Event) {
-		const [scrolled, target] =
-			e.target == inputElem ? [inputElem, rendererElem] : [rendererElem, inputElem];
-
-		if (windowMode != 'split') return;
-		if (scroll != 'sync') return;
-
-		if (scrolled && target) {
-			synchronizeScroll(scrolled, target);
-		}
-	}
-
-	/**
-	 * Synchronize the scroll between the input and renderer.
-	 * @param scrolled The element that is scrolled.
-	 * @param target The target element to scroll.
-	 */
-	let debugBoxDrawn = false;
-	function synchronizeScroll(scrolled: HTMLDivElement, target: HTMLDivElement) {
-
-		if(!carta.input) return;
-		if(!rendererElem) return;
-		if(target !== rendererElem) return;
-
-		const rect = scrolled.getBoundingClientRect();
-
-		if (!debugBoxDrawn) {
-			const box = document.createElement('div');
-			Object.assign(box.style, {
-				position: 'fixed',        // fixed to viewport
-				left:       `${rect.left + 7.5}px`,
-				top:        `${rect.top  + 7.5}px`,
-				width:      `${5}px`,
-				height:     `${5}px`,
-				background: 'red',
-				pointerEvents: 'none',    // so it doesn’t block clicks
-				zIndex:     '9999'
-			});
-			document.body.appendChild(box);
-			debugBoxDrawn = true;
+		const exactMatch = rendererElem.querySelector(`[data-line="${currentScrollLine}"]`);
+		if (exactMatch instanceof HTMLElement) {
+			return exactMatch;
 		}
 
-		// Get elements at the top left of the input element
-		const elements = document.elementsFromPoint(rect.left + 10, rect.top  + 10);
+		const elements = rendererElem.querySelectorAll('[data-line]');
+		let bestMatch: HTMLElement | null = null;
+		let bestMatchLineValue = -Infinity;
 
-		// find the first <span class="line"> in that list
-		const spanLine = elements.find(el => el.matches('span.line'));
-		if(!spanLine) return;
-
-		const codeEl = spanLine.closest('code');
-		const childElems = Array.from(codeEl.children);
-		const spanLineNumber = childElems.indexOf(spanLine) + 1;
-
-		console.log('span.line is child #', spanLineNumber, 'of its <code>');
-
-		// Loop through all elements with data-line attribute and find the closest one
-		const initialAccumulator: { el: HTMLElement | null; line: number } = { el: null, line: Infinity };
-		const targetElement: HTMLElement | null = Array.from(rendererElem.querySelectorAll<HTMLElement>('[data-line]'))
-				.map((el_dom_node): { el: HTMLElement; line: number } => ({
-					el: el_dom_node,
-					line: parseInt(el_dom_node.getAttribute('data-line') || '0', 10)
-				}))
-				.reduce((closest, current) => {
-					if (closest.el === null) {
-						// First element is always the "closest" so far
-						return current;
+		// iterate to find the closest match before
+		elements.forEach(element => {
+			if (element instanceof HTMLElement) {
+				const lineValue = parseInt(element.dataset.line!, 10);
+				if (!isNaN(lineValue)) {
+					if (lineValue < targetLineNumber && lineValue > bestMatchLineValue) {
+						bestMatch = element;
+						bestMatchLineValue = lineValue;
 					}
+				}
+			}
+		});
 
-					const distCurrent = Math.abs(current.line - spanLineNumber);
-					const distClosest = Math.abs(closest.line - spanLineNumber);
+		return bestMatch;
+	}
 
-					if (distCurrent < distClosest) {
-						// Current is strictly closer
-						return current;
-					} else if (distCurrent === distClosest) {
-						// Equally close, prefer the one with the smaller line number
-						return (current.line < closest.line) ? current : closest;
-					} else {
-						// Closest is still closer (or equally close but has a smaller or equal line number from previous tie-break)
-						return closest;
-					}
-				}, initialAccumulator).el;
+	/**
+	 * Set the scroll position of the active tab based on the current line.
+	 */
+	function setScrollPosition() {
+		if(selectedTab === 'write') {
+			if (!inputElem) return;
 
-		if (targetElement) {
-			target.scrollTo({
-				top: targetElement.offsetTop,
-				behavior: 'smooth'
-			});
+			const markdownLineElements = inputElem
+					.querySelector('.carta-highlight')
+					?.querySelector('pre > code')
+					?.querySelectorAll<HTMLElement>('span.line');
+
+			if (!markdownLineElements || currentScrollLine > markdownLineElements.length) {
+				return;
+			}
+
+			const mdElem = markdownLineElements[currentScrollLine - 1];
+			if(mdElem) {
+				isSyncingMarkdown = true;
+				mdElem.scrollIntoView({ block: 'start', behavior: 'instant' });
+				setTimeout(() => { isSyncingMarkdown = false; }, SYNC_DELAY);
+			}
+		} else {
+			if(!rendererElem) return;
+
+			const htmlElem = findElementByLineOrBefore(rendererElem, currentScrollLine);
+			if (htmlElem) {
+				isSyncingHtml = true;
+				htmlElem.scrollIntoView({ block: 'start', behavior: 'instant' });
+				setTimeout(() => { isSyncingHtml = false; }, SYNC_DELAY);
+			}
 		}
 	}
 
 	/**
-	 * Load the scroll position of the selected tab.
-	 * @param tab The tab to load the scroll position.
+	 * Synchronizes scrolling between Input and Renderer.
+	 *
+	 * Uses IntersectionObserver to identify markdown lines (`span.line` by index)
+	 * and HTML lines (`[data-line]` attribute) and keep their scroll positions aligned.
+	 * Uses MutationObserver to handle dynamic content.
+	 *
+	 * @param {HTMLDivElement} markdownPane The scrollable markdown editor container.
+	 * @param {HTMLDivElement} htmlPane The scrollable HTML preview container.
+	 * @returns {function} A cleanup function to disconnect observers.
 	 */
-	function loadScrollPosition(tab: 'write' | 'preview') {
-		if (windowMode !== 'tabs') return;
-		const elem = tab === 'write' ? inputElem : rendererElem;
-		if (!elem) return;
+	function setupScrollSync(markdownPane:HTMLDivElement, htmlPane:HTMLDivElement): () => void {
 
-		const avbSpace = elem.scrollHeight - elem.clientHeight;
-		elem.scroll({ top: avbSpace * currentScrollPercentage, behavior: 'instant' });
-	}
+		const highlightContainer = markdownPane.querySelector('.carta-highlight');
+		if (!highlightContainer) { console.error("no highlightContainer"); return () => {}; }
 
-	function handleSelectionScroll() {
-		if (scroll !== 'cursor') return;
-		if (windowMode !== 'split') return;
-		if (!carta.input) return;
-		if(!rendererElem) return;
+		const getMarkdownCodeElement = () => highlightContainer.querySelector('pre > code');
 
-		// Count new lines in the textarea to find the line number
-		const line = carta.input.textarea.value.slice(0, carta.input.textarea.selectionStart).split('\n').length;
+		const observerOptions = (rootElement: HTMLElement) => ({
+			root: rootElement,
+			rootMargin: '0px 0px -95% 0px',
+			threshold: 0
+		});
 
-		// Loop through all elements with data-line attribute and find the closest one
-		const initialAccumulator: { el: HTMLElement | null; line: number } = { el: null, line: Infinity };
-		const targetElement: HTMLElement | null = Array.from(rendererElem.querySelectorAll<HTMLElement>('[data-line]'))
-				.map((el_dom_node): { el: HTMLElement; line: number } => ({
-					el: el_dom_node,
-					line: parseInt(el_dom_node.getAttribute('data-line') || '0', 10)
-				}))
-				.reduce((closest, current) => {
-					if (closest.el === null || Math.abs(current.line - line) < Math.abs(closest.line - line)) {
-						return current;
-					} else {
-						return closest;
-					}
-				}, initialAccumulator).el;
+		const getTopmostVisibleEntry = (entries: IntersectionObserverEntry[]) => {
+			const visibleEntries = entries.filter(e => e.isIntersecting && e.target.isConnected);
+			if (!visibleEntries.length) return null;
+			return visibleEntries.reduce((prev, curr) =>
+					prev.boundingClientRect.top < curr.boundingClientRect.top ? prev : curr
+			);
+		};
 
-		if (targetElement) {
-			const rendererVisibleHeight = rendererElem.clientHeight;
-			const targetOffsetTop = targetElement.offsetTop;
-			const targetHeight = targetElement.offsetHeight;
+		// --- HTML (Rendered View) to Markdown (Editor) Sync ---
+		const htmlObserver = new IntersectionObserver((entries) => {
+			// Ignore any triggers when not on the preview tab
+			// if (windowMode === 'tabs' && selectedTab !== 'preview') return;
 
-			const scrollToY = targetOffsetTop + (targetHeight / 2) - (rendererVisibleHeight / 2);
+			if (isSyncingHtml) return;
 
-			rendererElem.scrollTo({
-				top: scrollToY,
-				behavior: 'smooth'
-			});
+			const topEntry = getTopmostVisibleEntry(entries);
+			if (!topEntry) return;
+
+			const lineNumStr = topEntry.target.getAttribute('data-line');
+			if (!lineNumStr) return;
+
+			currentScrollLine = parseInt(lineNumStr, 10);
+
+			const codeElement = getMarkdownCodeElement();
+			if (!codeElement) return;
+
+			const markdownLines = codeElement.querySelectorAll('span.line');
+			const mdElem = markdownLines[currentScrollLine - 1];
+
+			if (mdElem) {
+				isSyncingMarkdown = true;
+
+				const targetScrollTop = mdElem.getBoundingClientRect().top -
+						markdownPane.getBoundingClientRect().top +
+						markdownPane.scrollTop;
+
+				customSmoothScroll(markdownPane, targetScrollTop, SMOOTH_SCROLL_DURATION, () => {
+					isSyncingMarkdown = false;
+				});
+			}
+
+		}, observerOptions(htmlPane));
+
+		// --- Markdown (Editor) to HTML (Rendered View) Sync ---
+		const markdownObserver = new IntersectionObserver((entries) => {
+			// Ignore any triggers when not on the write tab
+			// if (windowMode === 'tabs' && selectedTab !== 'write') return;
+
+			if (isSyncingMarkdown) return;
+
+			const topEntry = getTopmostVisibleEntry(entries);
+			if (!topEntry) return;
+
+			const codeElement = getMarkdownCodeElement();
+			if (!codeElement || !codeElement.contains(topEntry.target)) return;
+
+			const allMarkdownLines = Array.from(codeElement.children);
+			const lineIndex = allMarkdownLines.indexOf(topEntry.target);
+			if (lineIndex === -1) return;
+			currentScrollLine = lineIndex + 1;
+
+			const htmlElem = htmlPane.querySelector(`[data-line="${currentScrollLine}"]`);
+
+			if (htmlElem) {
+				isSyncingHtml = true;
+				const targetScrollTop = htmlElem.getBoundingClientRect().top -
+						htmlPane.getBoundingClientRect().top +
+						htmlPane.scrollTop;
+				customSmoothScroll(htmlPane, targetScrollTop, SMOOTH_SCROLL_DURATION, () => {
+					isSyncingHtml = false;
+				});
+			}
+
+		}, observerOptions(markdownPane));
+
+
+		function observeAll() {
+			markdownObserver.disconnect();
+			htmlObserver.disconnect();
+
+			const codeElement = getMarkdownCodeElement();
+			if (codeElement) {
+				codeElement.querySelectorAll('span.line').forEach(el => markdownObserver.observe(el));
+			}
+			htmlPane.querySelectorAll('[data-line]').forEach(el => htmlObserver.observe(el));
 		}
+
+		requestAnimationFrame(observeAll);
+
+		const mutationObserverConfig = { childList: true, subtree: true };
+		const mdMutationObserver = new MutationObserver(observeAll);
+		mdMutationObserver.observe(highlightContainer, mutationObserverConfig);
+
+		const htmlMutationObserver = new MutationObserver(observeAll);
+		htmlMutationObserver.observe(htmlPane, mutationObserverConfig);
+
+		return () => {
+			// Clean up observers
+			markdownObserver.disconnect();
+			htmlObserver.disconnect();
+			mdMutationObserver.disconnect();
+			htmlMutationObserver.disconnect();
+			// Clear any pending animations
+			if (animationFrameIds.has(markdownPane)) {
+				cancelAnimationFrame(animationFrameIds.get(markdownPane));
+				animationFrameIds.delete(markdownPane);
+			}
+			if (animationFrameIds.has(htmlPane)) {
+				cancelAnimationFrame(animationFrameIds.get(htmlPane));
+				animationFrameIds.delete(htmlPane);
+			}
+		};
 	}
 
 	onMount(() => carta.$setElement(editorElem));
 	onMount(() => (mounted = true));
+	onMount(() => {
+		if(scroll === 'sync') {
+			if(inputElem && rendererElem) {
+				setupScrollSync(inputElem, rendererElem)
+			} else {
+				console.error("Input or Renderer element is not defined");
+			}
+		}
+	});
+
 </script>
 
 <div bind:this={editorElem} bind:clientWidth={width} class="carta-editor carta-theme__{theme}">
@@ -293,12 +400,10 @@
 				{placeholder}
 				{highlightDelay}
 				props={textarea}
-				hidden={!(windowMode == 'split' || selectedTab == 'write')}
+				hidden={!(windowMode === 'split' || selectedTab === 'write')}
 				bind:value
 				bind:this={input}
 				bind:elem={inputElem}
-				onscroll={handleScroll}
-				onselectionchange={handleSelectionScroll}
 			>
 				<!-- Input extensions components -->
 				{#if mounted}
@@ -312,16 +417,8 @@
 			<Renderer
 				{carta}
 				{value}
-				hidden={!(windowMode == 'split' || selectedTab == 'preview')}
+				hidden={!(windowMode === 'split' || selectedTab === 'preview')}
 				bind:elem={rendererElem}
-				onscroll={()=>{}}
-				onrender={() => {
-					if (windowMode != 'split') return;
-					if (scroll != 'sync') return;
-					if (!inputElem) return;
-					if (!rendererElem) return;
-					synchronizeScroll(inputElem, rendererElem);
-				}}
 			>
 				<!-- Renderer extensions components -->
 				{#if mounted}

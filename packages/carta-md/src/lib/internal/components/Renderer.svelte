@@ -5,8 +5,7 @@
 -->
 
 <script lang="ts">
-	import type { Carta } from '../carta';
-	import type { UIEventHandler } from 'svelte/elements';
+	import type { Carta } from '$lib';
 	import { onMount, type Snippet } from 'svelte';
 	import { debounce } from '../utils';
 
@@ -28,8 +27,6 @@
 		 */
 		hidden?: boolean;
 		children?: Snippet;
-		onscroll: UIEventHandler<HTMLDivElement>;
-		onrender: () => void;
 	}
 
 	let {
@@ -38,8 +35,6 @@
 		elem = $bindable(),
 		hidden = false,
 		children,
-		onscroll,
-		onrender
 	}: Props = $props();
 
 	let mounted = $state(false);
@@ -52,8 +47,7 @@
 			.then((rendered) => {
 				renderedHtml = ''; // Force @html to re-render everything
 				renderedHtml = rendered;
-			})
-			.then(() => onrender());
+			});
 	}, carta.rendererDebounce ?? 300);
 
 	const onValueChange = (value: string) => {
@@ -74,7 +68,6 @@
 	class="carta-renderer markdown-body"
 	style="display: {hidden ? 'none' : 'unset'};"
 	bind:this={elem}
-	{onscroll}
 >
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html renderedHtml}
