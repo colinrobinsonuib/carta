@@ -110,7 +110,7 @@
 		if (windowMode === 'tabs') setScrollPosition();
 	});
 
-	let currentScrollLine = 0;
+	let currentScrollLine = 1;
 	let isSyncingMarkdown = false;
 	let isSyncingHtml = false;
 
@@ -227,7 +227,7 @@
 		} else {
 			if(!rendererElem) return;
 
-			const htmlElem = findElementByLineOrBefore(rendererElem, currentScrollLine);
+			const htmlElem = findElementByLineOrBefore(currentScrollLine);
 			if (htmlElem) {
 				isSyncingHtml = true;
 				htmlElem.scrollIntoView({ block: 'start', behavior: 'instant' });
@@ -268,10 +268,16 @@
 			);
 		};
 
+		let firstHTMLIntersection = true;
+
 		// --- HTML (Rendered View) to Markdown (Editor) Sync ---
 		const htmlObserver = new IntersectionObserver((entries) => {
-			// Ignore any triggers when not on the preview tab
-			// if (windowMode === 'tabs' && selectedTab !== 'preview') return;
+			// When we initialize, some elements will already be intersecting. We don't want to trigger the scroll
+			// for those, so we skip the first intersection.
+			if(firstHTMLIntersection) {
+				firstHTMLIntersection = false;
+				return;
+			}
 
 			if (isSyncingHtml) return;
 
@@ -305,9 +311,6 @@
 
 		// --- Markdown (Editor) to HTML (Rendered View) Sync ---
 		const markdownObserver = new IntersectionObserver((entries) => {
-			// Ignore any triggers when not on the write tab
-			// if (windowMode === 'tabs' && selectedTab !== 'write') return;
-
 			if (isSyncingMarkdown) return;
 
 			const topEntry = getTopmostVisibleEntry(entries);
@@ -340,20 +343,36 @@
 			markdownObserver.disconnect();
 			htmlObserver.disconnect();
 
+			// Observe all markdown lines
 			const codeElement = getMarkdownCodeElement();
 			if (codeElement) {
 				codeElement.querySelectorAll('span.line').forEach(el => markdownObserver.observe(el));
 			}
+
+			// Observe all HTML elements with data-line attribute
 			htmlPane.querySelectorAll('[data-line]').forEach(el => htmlObserver.observe(el));
+			firstHTMLIntersection = true;
+		}
+
+		let observeAllTimeoutId: number | null = null;
+		const DEBOUNCE_OBSERVE_ALL_DELAY = 150;
+		function debouncedObserveAll(): void {
+			if (observeAllTimeoutId !== null) {
+				clearTimeout(observeAllTimeoutId);
+			}
+			observeAllTimeoutId = window.setTimeout(() => {
+				observeAll();
+				observeAllTimeoutId = null;
+			}, DEBOUNCE_OBSERVE_ALL_DELAY);
 		}
 
 		requestAnimationFrame(observeAll);
 
 		const mutationObserverConfig = { childList: true, subtree: true };
-		const mdMutationObserver = new MutationObserver(observeAll);
+		const mdMutationObserver = new MutationObserver(debouncedObserveAll);
 		mdMutationObserver.observe(highlightContainer, mutationObserverConfig);
 
-		const htmlMutationObserver = new MutationObserver(observeAll);
+		const htmlMutationObserver = new MutationObserver(debouncedObserveAll);
 		htmlMutationObserver.observe(htmlPane, mutationObserverConfig);
 
 		return () => {
